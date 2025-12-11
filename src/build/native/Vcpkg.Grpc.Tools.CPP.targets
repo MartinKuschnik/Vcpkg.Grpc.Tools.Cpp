@@ -58,7 +58,7 @@
         <Error Condition="!Exists('$(GrpcDir)') AND $(VcpkgEnableManifest)=='true'" Text="gRPC not found. Add grpc as dependency to the 'vcpkg.json' file." />
 		
         <MakeDir Directories="$(ProtobufOutDir)" Condition="!Exists('$(ProtobufOutDir)')" />		
-        <Exec Command="&quot;$(ProtobufDir)protoc.exe&quot; --plugin=protoc-gen-grpc=&quot;$(GrpcDir)grpc_cpp_plugin.exe&quot; --grpc_out=&quot;$(ProtobufOutDir.Trim('\\'))&quot; --cpp_out=&quot;$(ProtobufOutDir.Trim('\\'))&quot; --proto_path=&quot;$(ProtoPath.Trim('\\'))&quot; &quot;%(ProtobufCompile.FullPath)&quot;" SkipUnchangedFiles="true" />
+        <Exec Command="&quot;$(ProtobufDir)protoc.exe&quot; --plugin=protoc-gen-grpc=&quot;$(GrpcDir)grpc_cpp_plugin.exe&quot; --grpc_out=&quot;$(ProtobufOutDir.Trim('\\'))&quot; --cpp_out=&quot;$(ProtobufOutDir.Trim('\\'))&quot; --proto_path=&quot;$(ProtoPath.Trim('\\'))&quot; &quot;%(ProtobufCompile.FullPath)&quot;" />
         
 	<ItemGroup>
             <ClInclude WarningLevel="TurnOffAllWarnings" Include="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.h')" />
