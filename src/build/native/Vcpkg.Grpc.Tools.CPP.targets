@@ -29,11 +29,11 @@
     </ItemDefinitionGroup>
 	
 	<PropertyGroup Condition="$(VcpkgInstalledDir)==''">
-		<VcpkgInstallDir>$(VcpkgRoot)\installed\x64-windows\</VcpkgInstallDir>
+		<VcpkgInstallDir>$(VcpkgRoot.Trim('\\'))\installed\x64-windows\</VcpkgInstallDir>
 	</PropertyGroup>
 	
 	<PropertyGroup Condition="$(VcpkgInstalledDir)!=''">
-		<VcpkgInstallDir>$(VcpkgInstalledDir)\x64-windows\</VcpkgInstallDir>
+		<VcpkgInstallDir>$(VcpkgInstalledDir.Trim('\\'))\x64-windows\</VcpkgInstallDir>
 	</PropertyGroup>
 	
 	<PropertyGroup Condition="$(VcpkgEnableManifest)!='true'">
