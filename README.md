@@ -254,16 +254,6 @@ The package uses MSBuild's `CustomBuild` item type with input/output tracking:
 
 ---
 
-## What's Included
-
-This NuGet package contains:
-- `Vcpkg.Grpc.Tools.CPP.targets` - MSBuild integration
-- `Vcpkg.Grpc.Tools.CPP.proto.xml` - Visual Studio property page definitions
-
-**Note**: The actual `protoc.exe` and `grpc_cpp_plugin.exe` compilers come from your vcpkg installation.
-
----
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
