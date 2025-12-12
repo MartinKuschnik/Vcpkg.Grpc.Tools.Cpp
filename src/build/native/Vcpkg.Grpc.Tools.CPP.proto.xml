@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ProjectSchemaDefinitions xmlns="http://schemas.microsoft.com/build/2009/properties">
-	<ItemType Name="ProtobufCompile" DisplayName="Protobuf Compile" />
-	<FileExtension Name="*.proto" ContentType="ProtobufCompile" />
-	<ContentType Name="ProtobufCompile" DisplayName="Protobuf Compile" ItemType="ProtobufCompile" />
+	<!-- Associates .proto files with the ProtobufCompile item type for Visual Studio UI integration.
+	     Note: Due to file change detection limitations in C++ projects, .proto files are actually processed
+	     as CustomBuild items in the targets file to ensure proper recompilation on changes. -->
+	<FileExtension Name="*.proto" ContentType="ProtobufCompileContentType" />
+	<ContentType Name="ProtobufCompileContentType" ItemType="ProtobufCompile" />
 </ProjectSchemaDefinitions>

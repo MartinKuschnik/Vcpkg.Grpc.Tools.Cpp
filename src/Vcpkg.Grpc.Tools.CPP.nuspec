@@ -2,20 +2,19 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>Vcpkg.Grpc.Tools.CPP</id>
-    <version>1.1.0-pre</version>
-    <title>Grpc.Tools.CPP</title>
+    <version>2.0.0-pre</version>
+    <title>Vcpkg.Grpc.Tools.CPP</title>
     <authors>Martin Kuschnik</authors>
     <owners>Martin Kuschnik</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>gRPC and Protocol Buffer compiler integration for native C++ projects.</description>
     <projectUrl>https://github.com/MartinKuschnik/Grpc.Tools.Cpp</projectUrl>
     <repository type="git" url="https://github.com/MartinKuschnik/Grpc.Tools.Cpp.git" />
-    <copyright>Copyright 2021 Martin Kuschnik</copyright>
+    <copyright>Copyright 2025 Martin Kuschnik</copyright>
     <tags>gRPC RPC HTTP/2 c++ cpp vcpkg</tags>
   </metadata>
   <files>
     <file src="build\native\Vcpkg.Grpc.Tools.CPP.proto.xml" target="build\native\Vcpkg.Grpc.Tools.CPP.proto.xml" />
     <file src="build\native\Vcpkg.Grpc.Tools.CPP.targets" target="build\native\Vcpkg.Grpc.Tools.CPP.targets" />
-    <file src="build\native\Vcpkg.Grpc.Tools.CPP.xml" target="build\native\Vcpkg.Grpc.Tools.CPP.xml" />
   </files>
 </package>
