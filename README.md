@@ -11,19 +11,19 @@ This NuGet package provides seamless integration of Protocol Buffer (`.proto`) c
 
 ---
 
-## ?? Features
+## Features
 
-- ? **Automatic Compilation**: `.proto` files are automatically compiled during build
-- ? **Incremental Builds**: Only changed `.proto` files are recompiled (saves build time!)
-- ? **Per-File Configuration**: Configure compilation settings individually for each `.proto` file
-- ? **Visual Studio Integration**: Full property page support in Visual Studio
-- ? **vcpkg Integration**: Works seamlessly with vcpkg's manifest and classic mode
-- ? **Smart Import Handling**: Flexible import path configuration per file
-- ? **Zero Configuration**: Works out-of-the-box with sensible defaults
+- **Automatic Compilation**: `.proto` files are automatically compiled during build
+- **Incremental Builds**: Only changed `.proto` files are recompiled (saves build time!)
+- **Per-File Configuration**: Configure compilation settings individually for each `.proto` file
+- **Visual Studio Integration**: Full property page support in Visual Studio
+- **vcpkg Integration**: Works seamlessly with vcpkg's manifest and classic mode
+- **Smart Import Handling**: Flexible import path configuration per file
+- **Zero Configuration**: Works out-of-the-box with sensible defaults
 
 ---
 
-## ?? Prerequisites
+## Prerequisites
 
 - **Visual Studio** (2015 or later) with C++ development tools
 - **Windows** operating system
@@ -32,7 +32,7 @@ This NuGet package provides seamless integration of Protocol Buffer (`.proto`) c
 
 ---
 
-## ?? Quick Start
+## Quick Start
 
 ### 1. Install Required vcpkg Packages
 
@@ -83,7 +83,7 @@ Generated files are placed in subdirectories of your project's intermediate dire
 
 ---
 
-## ?? How It Works
+## How It Works
 
 ### Build Process
 
@@ -99,12 +99,12 @@ Generated files are organized in your project's intermediate directory:
 
 ```
 Intermediate Directory (e.g., x64\Debug\)
-??? protobuf\
-?   ??? messages.pb.h
-?   ??? messages.pb.cc
-??? grpc\
-    ??? messages.grpc.pb.h
-    ??? messages.grpc.pb.cc
+- protobuf\
+  - messages.pb.h
+  - messages.pb.cc
+- grpc\
+  - messages.grpc.pb.h
+  - messages.grpc.pb.cc
 ```
 
 Include paths are automatically configured, so you can simply:
@@ -115,7 +115,7 @@ Include paths are automatically configured, so you can simply:
 
 ---
 
-## ?? Example Usage
+## Example Usage
 
 ### Simple Message Definition
 
@@ -203,7 +203,7 @@ int main() {
 
 ---
 
-## ?? Troubleshooting
+## Troubleshooting
 
 ### Error: "Vcpkg not enabled"
 
@@ -231,8 +231,8 @@ Or add them to your `vcpkg.json` if using manifest mode.
 ### Proto File Changes Not Detected
 
 This package uses **CustomBuild** items with MSBuild's incremental build tracking. Changes should be detected automatically. If not:
-1. Clean the project (Build ? Clean Solution)
-2. Rebuild (Build ? Rebuild Solution)
+1. Clean the project (Build -> Clean Solution)
+2. Rebuild (Build -> Rebuild Solution)
 
 ### Include Errors in Generated Files
 
@@ -242,19 +242,19 @@ If you see errors like `cannot open include file: 'google/protobuf/...'`:
 
 ---
 
-## ?? Incremental Build Support
+## Incremental Build Support
 
 **Key Feature**: Only changed `.proto` files are recompiled!
 
 The package uses MSBuild's `CustomBuild` item type with input/output tracking:
-- ? Compares timestamps of `.proto` files and generated outputs
-- ? Skips compilation if files are up-to-date
-- ? Significantly reduces build times in large projects
-- ? Detects changes to `.proto` files automatically
+- Compares timestamps of `.proto` files and generated outputs
+- Skips compilation if files are up-to-date
+- Significantly reduces build times in large projects
+- Detects changes to `.proto` files automatically
 
 ---
 
-## ?? What's Included
+## What's Included
 
 This NuGet package contains:
 - `Vcpkg.Grpc.Tools.CPP.targets` - MSBuild integration
@@ -264,7 +264,7 @@ This NuGet package contains:
 
 ---
 
-## ?? Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -276,21 +276,21 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-## ?? License
+## License
 
 This project is provided as-is without any specific license restrictions. You are free to use, modify, and distribute this software as you see fit, but please do not claim it as your own work.
 
-**Copyright © 2025 Martin Kuschnik**
+**Copyright (c) 2025 Martin Kuschnik**
 
 ---
 
-## ?? Version History
+## Version History
 
 For detailed version history and changelog, see the [Releases](https://github.com/MartinKuschnik/Vcpkg.Grpc.Tools.Cpp/releases) page.
 
 ---
 
-## ?? Related Links
+## Related Links
 
 - [Protocol Buffers Documentation](https://protobuf.dev/)
 - [gRPC C++ Documentation](https://grpc.io/docs/languages/cpp/)
@@ -301,13 +301,13 @@ For detailed version history and changelog, see the [Releases](https://github.co
 
 ---
 
-## ?? Support
+## Support
 
 For issues and feature requests, please use the [GitHub Issues](https://github.com/MartinKuschnik/Vcpkg.Grpc.Tools.Cpp/issues) page.
 
 ---
 
-## ?? Why This Package?
+## Why This Package?
 
 While vcpkg provides the protobuf and gRPC libraries, integrating proto file compilation into your build process can be tedious. This package:
 
@@ -317,4 +317,4 @@ While vcpkg provides the protobuf and gRPC libraries, integrating proto file com
 - Works seamlessly with vcpkg's dependency management
 - Reduces boilerplate in your project files
 
-Just install the package, add your `.proto` files, and build! ??
+Just install the package, add your `.proto` files, and build!
