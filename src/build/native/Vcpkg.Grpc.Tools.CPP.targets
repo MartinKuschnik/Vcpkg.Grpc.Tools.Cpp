@@ -58,7 +58,7 @@
 
 		<Error Condition="$(VcpkgEnabled)!='true'" Text="Vcpkg not enabled. See https://github.com/microsoft/vcpkg#getting-started for more details." />
 
-		<Error Condition="!Exists('$(ProtobufDir)protoc.exe') AND $(VcpkgEnableManifest)!='true'" Text="protobuf not installed. Use 'vcpkg install protobuf:$(PlatformTarget)-windows' to install gRPC." />
+		<Error Condition="!Exists('$(ProtobufDir)protoc.exe') AND $(VcpkgEnableManifest)!='true'" Text="protobuf not installed. Use 'vcpkg install protobuf:$(PlatformTarget)-windows' to install Protobuf." />
 		<Error Condition="!Exists('$(ProtobufDir)protoc.exe') AND $(VcpkgEnableManifest)=='true'" Text="protobuf not found. Add protobuf as dependency to the 'vcpkg.json' file." />
 
 		<Error Condition="!Exists('$(GrpcDir)grpc_cpp_plugin.exe') AND $(VcpkgEnableManifest)=='true'" Text="gRPC not found. Add grpc as dependency to the 'vcpkg.json' file." />

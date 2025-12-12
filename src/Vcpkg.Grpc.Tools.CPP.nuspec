@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>Vcpkg.Grpc.Tools.CPP</id>
-    <version>2.0.0</version>
+    <version>2.0.1</version>
     <title>Vcpkg.Grpc.Tools.CPP</title>
     <authors>Martin Kuschnik</authors>
     <owners>Martin Kuschnik</owners>
