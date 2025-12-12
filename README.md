@@ -7,6 +7,8 @@
 
 This NuGet package provides seamless integration of Protocol Buffer (`.proto`) compilation and gRPC code generation into Visual Studio C++ projects that use vcpkg for dependency management.
 
+> **Note**: If you only need Protocol Buffer support without gRPC, consider using [Vcpkg.Protobuf.Tools.Cpp](https://github.com/MartinKuschnik/Vcpkg.Protobuf.Tools.Cpp) instead.
+
 ---
 
 ## ?? Features
@@ -66,73 +68,18 @@ Or via Package Manager UI in Visual Studio.
 ### 3. Add .proto Files to Your Project
 
 1. Add your `.proto` files to your project
-2. Right-click on a `.proto` file ? **Properties**
-3. Set **Item Type** to **Protobuf Compile**
-
-Example `.proto` file structure:
-```
-YourProject/
-??? protos/
-?   ??? messages.proto
-?   ??? service.proto
-??? YourProject.vcxproj
-```
+2. After installing the NuGet package, all `.proto` files are automatically configured with the **ProtobufCompile** item type
+3. **Important**: A restart of Visual Studio may be required for the new item type to be recognized
 
 ### 4. Build Your Project
 
-When you build your project, the following files are automatically generated:
-
-For each `.proto` file (e.g., `messages.proto`):
+When you build your project, the following files are automatically generated for each `.proto` file (e.g., `messages.proto`):
 - `messages.pb.h` / `messages.pb.cc` - Protocol Buffer message definitions
 - `messages.grpc.pb.h` / `messages.grpc.pb.cc` - gRPC service stubs
 
-Generated files are placed in:
-- `$(IntDir)\protobuf\` - for `.pb.h` and `.pb.cc` files
-- `$(IntDir)\grpc\` - for `.grpc.pb.h` and `.grpc.pb.cc` files
-
----
-
-## ?? Configuration
-
-### Per-File Properties
-
-Right-click on any `.proto` file in Solution Explorer ? **Properties** to configure:
-
-| Property | Description | Default |
-|----------|-------------|---------|
-| **Compile Protobuf** | Whether to compile this file or only use it for imports | `true` |
-| **Proto Root Directory** | Root directory for proto imports | Auto-detected |
-| **Additional Import Directories** | Additional paths for proto imports (semicolon-separated) | Empty |
-
-### Example Configuration in .vcxproj
-
-```xml
-<ItemGroup>
-  <ProtobufCompile Include="protos\messages.proto">
-    <ProtoCompile>true</ProtoCompile>
-    <ProtoRoot>.</ProtoRoot>
-  </ProtobufCompile>
-  
-  <!-- This file is only for imports, not compiled -->
-  <ProtobufCompile Include="protos\common.proto">
-    <ProtoCompile>false</ProtoCompile>
-  </ProtobufCompile>
-  
-  <!-- Custom import paths -->
-  <ProtobufCompile Include="protos\service.proto">
-    <ProtoCompile>true</ProtoCompile>
-    <AdditionalImportDirs>external\protos;third_party\protos</AdditionalImportDirs>
-  </ProtobufCompile>
-</ItemGroup>
-```
-
-### Proto Root Directory Logic
-
-The package automatically determines the proto root for imports:
-
-- **Files inside project directory**: `ProtoRoot` = `.` (project directory)
-- **Files outside project directory**: `ProtoRoot` = file's directory
-- **Explicit configuration**: Use the property to override
+Generated files are placed in subdirectories of your project's intermediate directory (typically `x64\Debug\` or `x64\Release\`):
+- `protobuf\` subdirectory - for `.pb.h` and `.pb.cc` files
+- `grpc\` subdirectory - for `.grpc.pb.h` and `.grpc.pb.cc` files
 
 ---
 
@@ -140,16 +87,18 @@ The package automatically determines the proto root for imports:
 
 ### Build Process
 
-1. **Validation**: Checks if vcpkg and required tools are available
-2. **File Selection**: Determines which `.proto` files need compilation
-3. **Up-to-Date Check**: Skips files that haven't changed (incremental build)
-4. **Compilation**: Runs `protoc.exe` with `grpc_cpp_plugin.exe` for outdated files
-5. **Integration**: Adds generated `.cc` files to the compilation
+1. **Validation**: Verifies that vcpkg is enabled and the required protobuf and gRPC tools are installed
+2. **File Selection**: Identifies all `.proto` files marked for compilation in your project
+3. **Up-to-Date Check**: Compares timestamps between source `.proto` files and their generated outputs to determine which files need recompilation
+4. **Compilation**: Executes the Protocol Buffer compiler (`protoc.exe`) with the gRPC plugin (`grpc_cpp_plugin.exe`) for any outdated files
+5. **Integration**: Automatically adds the generated `.cc` files to your project's compilation without cluttering the Solution Explorer
 
 ### Generated File Locations
 
+Generated files are organized in your project's intermediate directory:
+
 ```
-$(IntDir) (e.g., x64\Debug\)
+Intermediate Directory (e.g., x64\Debug\)
 ??? protobuf\
 ?   ??? messages.pb.h
 ?   ??? messages.pb.cc
@@ -276,7 +225,7 @@ Or add them to your `vcpkg.json` if using manifest mode.
 
 **Solution**: 
 1. Check that the build succeeded without errors
-2. Look in `$(IntDir)\protobuf\` and `$(IntDir)\grpc\` (e.g., `x64\Debug\protobuf\`)
+2. Look in your intermediate directory subdirectories `protobuf\` and `grpc\` (typically found in `x64\Debug\protobuf\` or `x64\Release\protobuf\`)
 3. Rebuild the project to regenerate files
 
 ### Proto File Changes Not Detected
@@ -348,6 +297,7 @@ For detailed version history and changelog, see the [Releases](https://github.co
 - [vcpkg Documentation](https://vcpkg.io/)
 - [NuGet Package](https://www.nuget.org/packages/Vcpkg.Grpc.Tools.Cpp/)
 - [GitHub Repository](https://github.com/MartinKuschnik/Vcpkg.Grpc.Tools.Cpp)
+- [Vcpkg.Protobuf.Tools.Cpp](https://github.com/MartinKuschnik/Vcpkg.Protobuf.Tools.Cpp) - For protobuf-only projects
 
 ---
 
