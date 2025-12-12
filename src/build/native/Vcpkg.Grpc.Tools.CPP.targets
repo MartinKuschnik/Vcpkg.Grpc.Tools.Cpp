@@ -1,83 +1,112 @@
 <?xml version="1.0"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <ItemGroup>
-        <!-- 
-		Custom project property page. (currently not needed.)
-		
-		<PropertyPageSchema Include="$(MSBuildThisFileDirectory)Vcpkg.Grpc.Tools.CPP.xml">
-            <Context>Project</Context>
-        </PropertyPageSchema> 
-		-->
-        <PropertyPageSchema Include="$(MSBuildThisFileDirectory)Vcpkg.Grpc.Tools.CPP.proto.xml" />
-        <AvailableItemName Include="ProtobufCompile">
-            <Targets>ProtobufCompile</Targets>
-        </AvailableItemName>
-    </ItemGroup>
-    <PropertyGroup>
-        <CleanDependsOn>
+	<ItemGroup>
+		<PropertyPageSchema Include="$(MSBuildThisFileDirectory)Vcpkg.Grpc.Tools.CPP.proto.xml" />
+	</ItemGroup>
+
+	<!-- Ensure protobuf and gRPC generated files are cleaned when the project is cleaned -->
+	<PropertyGroup>
+		<CleanDependsOn>
 			ProtobufClean;
+			GrpcClean;
 			$(CleanDependsOn)
-	</CleanDependsOn>
-    </PropertyGroup>
-    <ItemDefinitionGroup>
-        <ClCompile>
-            <AdditionalIncludeDirectories>%(ClCompile.AdditionalIncludeDirectories);$(IntDir)protoc\</AdditionalIncludeDirectories>
-        </ClCompile>
-		<Link>
-            <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-        </Link>
-    </ItemDefinitionGroup>
-	
+		</CleanDependsOn>
+	</PropertyGroup>
+
+	<!-- Determine the vcpkg installation directory based on project configuration -->
 	<PropertyGroup Condition="$(VcpkgInstalledDir)==''">
-		<VcpkgInstallDir>$(VcpkgRoot)\installed\x64-windows\</VcpkgInstallDir>
+		<VcpkgInstallDir>$(VcpkgRoot.Trim('\\'))\installed\x64-windows\</VcpkgInstallDir>
 	</PropertyGroup>
-	
+
 	<PropertyGroup Condition="$(VcpkgInstalledDir)!=''">
-		<VcpkgInstallDir>$(VcpkgInstalledDir)\x64-windows\</VcpkgInstallDir>
+		<VcpkgInstallDir>$(VcpkgInstalledDir.Trim('\\'))\x64-windows\</VcpkgInstallDir>
 	</PropertyGroup>
-	
+
+	<!-- Configure when protobuf/gRPC generation should run based on vcpkg manifest mode -->
 	<PropertyGroup Condition="$(VcpkgEnableManifest)!='true'">
 		<ProtobufAfterTargets>PrepareForBuild</ProtobufAfterTargets>
 	</PropertyGroup>
-	
+
 	<PropertyGroup Condition="$(VcpkgEnableManifest)=='true'">
 		<ProtobufAfterTargets>VcpkgInstallManifestDependencies</ProtobufAfterTargets>
 	</PropertyGroup>
-	
-    <Target Name="ProtobufCompile" AfterTargets="$(ProtobufAfterTargets)" Inputs="@(ProtobufCompile)" Outputs="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.h');@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.cc');@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).grpc.pb.h');@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).grpc.pb.cc')">
-			
+
+	<!-- Define paths for protobuf/gRPC tools and output directories -->
 	<PropertyGroup>
+		<ProtobufDir>$(VcpkgInstallDir)tools\protobuf\</ProtobufDir>
 		<GrpcDir>$(VcpkgInstallDir)tools\grpc\</GrpcDir>
-		<ProtobufDir>$(VcpkgInstallDir)tools\protobuf\</ProtobufDir>	
-            	<ProtoPath>%(ProtobufCompile.RootDir)\%(ProtobufCompile.Directory)</ProtoPath>
-		<ProtobufOutDir>$(IntDir)protoc\</ProtobufOutDir>
+		<ProtobufOutDir>$(IntDir)protobuf\</ProtobufOutDir>
+		<GrpcOutDir>$(IntDir)grpc\</GrpcOutDir>
 	</PropertyGroup>
-				
-        <Error Condition="$(VcpkgEnabled)!='true'" Text="Vcpkg not enabled. See https://github.com/microsoft/vcpkg#getting-started for more details." />
-				
-        <Error Condition="!Exists('$(GrpcDir)') AND $(VcpkgEnableManifest)!='true'" Text="gRPC not installed. Use 'vcpkg install grpc:$(PlatformTarget)-windows' to install gRPC." />		
-        <Error Condition="!Exists('$(GrpcDir)') AND $(VcpkgEnableManifest)=='true'" Text="gRPC not found. Add grpc as dependency to the 'vcpkg.json' file." />
-		
-        <MakeDir Directories="$(ProtobufOutDir)" Condition="!Exists('$(ProtobufOutDir)')" />		
-        <Exec Command="&quot;$(ProtobufDir)protoc.exe&quot; --plugin=protoc-gen-grpc=&quot;$(GrpcDir)grpc_cpp_plugin.exe&quot; --grpc_out=&quot;$(ProtobufOutDir.Trim('\\'))&quot; --cpp_out=&quot;$(ProtobufOutDir.Trim('\\'))&quot; --proto_path=&quot;$(ProtoPath.Trim('\\'))&quot; &quot;%(ProtobufCompile.FullPath)&quot;" />
-        
+
+	<!-- Add generated source directories to include paths and required libraries for linking -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<AdditionalIncludeDirectories>
+				%(ClCompile.AdditionalIncludeDirectories);
+				$(ProtobufOutDir);
+				$(GrpcOutDir);
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<!-- Validate that required tools exist and add generated .cc files to the compilation -->
+	<Target Name="_PrepareGrpcCompilation" AfterTargets="$(ProtobufAfterTargets)">
+
+		<Error Condition="$(VcpkgEnabled)!='true'" Text="Vcpkg not enabled. See https://github.com/microsoft/vcpkg#getting-started for more details." />
+
+		<Error Condition="!Exists('$(ProtobufDir)protoc.exe') AND $(VcpkgEnableManifest)!='true'" Text="protobuf not installed. Use 'vcpkg install protobuf:$(PlatformTarget)-windows' to install gRPC." />
+		<Error Condition="!Exists('$(ProtobufDir)protoc.exe') AND $(VcpkgEnableManifest)=='true'" Text="protobuf not found. Add protobuf as dependency to the 'vcpkg.json' file." />
+
+		<Error Condition="!Exists('$(GrpcDir)grpc_cpp_plugin.exe') AND $(VcpkgEnableManifest)=='true'" Text="gRPC not found. Add grpc as dependency to the 'vcpkg.json' file." />
+		<Error Condition="!Exists('$(GrpcDir)grpc_cpp_plugin.exe') AND $(VcpkgEnableManifest)!='true'" Text="gRPC not installed. Use 'vcpkg install grpc:$(PlatformTarget)-windows' to install gRPC." />
+
+		<!-- The .cc files must be in this target, otherwise these files would be displayed in the Solution Explorer, which is not desired. -->
+		<ItemGroup>
+			<ClCompile WarningLevel="TurnOffAllWarnings" Include="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.cc')" />
+			<ClCompile WarningLevel="TurnOffAllWarnings" Include="@(ProtobufCompile->'$(GrpcOutDir)%(Filename).grpc.pb.cc')" />
+		</ItemGroup>
+
+	</Target>
+
+	<!-- Configure CustomBuild to run after validation and before C++ compilation -->
+	<PropertyGroup>
+		<CustomBuildAfterTargets>_PrepareGrpcCompilation</CustomBuildAfterTargets>
+		<CustomBuildBeforeTargets>ClCompile</CustomBuildBeforeTargets>
+	</PropertyGroup>
+
 	<ItemGroup>
-            <ClInclude WarningLevel="TurnOffAllWarnings" Include="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.h" />
-            <ClCompile WarningLevel="TurnOffAllWarnings" Include="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.cc')" />
-            <ClInclude WarningLevel="TurnOffAllWarnings" Include="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).grpc.pb.h')" />
-            <ClCompile WarningLevel="TurnOffAllWarnings" Include="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).grpc.pb.cc')" />
-        </ItemGroup>
-		
-    </Target>
-	
-    <Target Name="ProtobufClean">
-	    <PropertyGroup>
-			<ProtobufOutDir>$(IntDir)protoc\</ProtobufOutDir>
-		</PropertyGroup>
-			
-        <Delete Files="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.h')" />
-        <Delete Files="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.cc')" />
-        <Delete Files="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).grpc.pb.h')" />
-        <Delete Files="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).grpc.pb.cc')" />
-    </Target>
+
+		<!-- Unfortunately, the detection of file changes in C++ projects does not work as expected, unlike in C# projects. -->
+		<!-- This has the consequence that file changes to a .proto file do not trigger a recompilation. -->
+		<!-- The following approach using CustomBuild solves this problem, but unfortunately has a disadvantage: -->
+		<!-- The ItemType "ProtobufCompile" cannot be specified in the ProjectSchemaDefinitions as expected, because Visual Studio shows the following error when loading the project: -->
+		<!-- Cannot load project with duplicated project items: xxx.proto is included as 'CustomBuild' and as 'ProtobufCompile' item types. -->
+		<!-- Therefore, no explicit ItemType is specified here - the CustomBuild type is implicitly applied through the Include attribute. -->
+		<CustomBuild Include="@(ProtobufCompile)">
+			<Outputs>
+				$(ProtobufOutDir)%(Filename).pb.h;
+				$(ProtobufOutDir)%(Filename).pb.cc;
+				$(GrpcOutDir)%(Filename).grpc.pb.h;
+				$(GrpcOutDir)%(Filename).grpc.pb.cc
+			</Outputs>
+			<Message>%(Filename)%(Extension)</Message>
+			<Command>"$(ProtobufDir)protoc.exe" --plugin=protoc-gen-grpc="$(GrpcDir)grpc_cpp_plugin.exe" --grpc_out="$(GrpcOutDir.Trim('\\'))" --cpp_out="$(ProtobufOutDir.Trim('\\'))" --proto_path=%(RootDir)%(Directory) %(FullPath)</Command>
+		</CustomBuild>
+	</ItemGroup>
+
+	<!-- Clean protobuf generated files -->
+	<Target Name="ProtobufClean">
+		<Delete Files="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.h')" />
+		<Delete Files="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.cc')" />
+	</Target>
+
+	<!-- Clean gRPC generated files -->
+	<Target Name="GrpcClean">
+		<Delete Files="@(ProtobufCompile->'$(GrpcOutDir)%(Filename).grpc.pb.h')" />
+		<Delete Files="@(ProtobufCompile->'$(GrpcOutDir)%(Filename).grpc.pb.cc')" />
+	</Target>
 </Project>
