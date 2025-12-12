@@ -93,7 +93,7 @@
 				$(GrpcOutDir)%(Filename).grpc.pb.h;
 				$(GrpcOutDir)%(Filename).grpc.pb.cc
 			</Outputs>
-			<Message>%(Identity)</Message>
+			<Message>%(Filename)%(Extension)</Message>
 			<Command>"$(ProtobufDir)protoc.exe" --plugin=protoc-gen-grpc="$(GrpcDir)grpc_cpp_plugin.exe" --grpc_out="$(GrpcOutDir.Trim('\\'))" --cpp_out="$(ProtobufOutDir.Trim('\\'))" --proto_path=%(RootDir)%(Directory) %(FullPath)</Command>
 		</CustomBuild>
 	</ItemGroup>
