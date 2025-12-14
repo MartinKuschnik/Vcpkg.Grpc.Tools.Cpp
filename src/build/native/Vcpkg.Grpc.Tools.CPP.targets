@@ -15,11 +15,11 @@
 
 	<!-- Determine the vcpkg installation directory based on project configuration -->
 	<PropertyGroup Condition="$(VcpkgInstalledDir)==''">
-		<VcpkgInstallDir>$(VcpkgRoot.Trim('\\'))\installed\x64-windows\</VcpkgInstallDir>
+		<VcpkgInstallDir>$(VcpkgRoot.TrimEnd('\'))\installed\x64-windows\</VcpkgInstallDir>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$(VcpkgInstalledDir)!=''">
-		<VcpkgInstallDir>$(VcpkgInstalledDir.Trim('\\'))\x64-windows\</VcpkgInstallDir>
+		<VcpkgInstallDir>$(VcpkgInstalledDir.TrimEnd('\'))\x64-windows\</VcpkgInstallDir>
 	</PropertyGroup>
 
 	<!-- Configure when protobuf/gRPC generation should run based on vcpkg manifest mode -->
@@ -33,8 +33,8 @@
 
 	<!-- Define paths for protobuf/gRPC tools and output directories -->
 	<PropertyGroup>
-		<ProtobufDir>$(VcpkgInstallDir)tools\protobuf\</ProtobufDir>
-		<GrpcDir>$(VcpkgInstallDir)tools\grpc\</GrpcDir>
+		<ProtobufExePath>$(VcpkgInstallDir)tools\protobuf\protoc.exe</ProtobufExePath>
+		<GrpcCppPluginExePath>$(VcpkgInstallDir)tools\grpc\grpc_cpp_plugin.exe</GrpcCppPluginExePath>
 		<ProtobufOutDir>$(IntDir)protobuf\</ProtobufOutDir>
 		<GrpcOutDir>$(IntDir)grpc\</GrpcOutDir>
 	</PropertyGroup>
@@ -53,16 +53,118 @@
 		</Link>
 	</ItemDefinitionGroup>
 
-	<!-- Validate that required tools exist and add generated .cc files to the compilation -->
-	<Target Name="_PrepareGrpcCompilation" AfterTargets="$(ProtobufAfterTargets)">
+	<!-- 
+	
+	The build process is a bit "tricky".
+	
+	Normally, a single build step as a target that runs after vcpkg and compiles the .proto files would be sufficient.
+	Unfortunately, the detection of changes to .proto files during targets in C++ projects does not work as expected,
+	and modifying a .proto file does not trigger a recompilation.
+	This would require always doing a rebuild, which is slow and annoying.
+	
+	However, C++ projects do allow the use of CustomBuilds, which always run before vcpkg.
+	But this CustomBuild also have some issues:
+	
+		- Runs very early in the build sequence and unfortunately cannot be moved later (after vcpkg).
+		
+		- Condition does not work as expected because the expressions (e.g. Exists(...)) are evaluated only once before any target runs.
+		
+		- The CustomBuild can not be defined by a Target, because this would also break change detection.
+		
+		- The required protoc.exe and grpc_cpp_plugin.exe is not yet available on the first build at this moment, because vcpkg runs afterwards
+	
+	To solve these problem, the following process was created:
+		
+	Stage 1 - Protobuf Configure via Target
+	
+		The target must run before vcpkg and configures the property ProtoCompileTwice depending on whether the protoc.exe and the grpc_cpp_plugin.exe already exists before vcpkg runs.
+		This property is used later for Stage 3 to detect if it is necessary to compile a second time after vcpkg.
+	
+	Stage 2 - Protobuf Compile via CustomBuilds 	
+	
+		Only executes if the protoc.exe and grpc_cpp_plugin.exe files exists.
+		Since this is the case for most builds, recompilation is performed when a .proto file changes.
+		
+	>>>>>>>>>>>>>>>>>>>>>>>>>     vcpkg runs     <<<<<<<<<<<<<<<<<<<<<<<<<	
+	
+	Stage 3 - Protobuf Compile via Target 
+
+		This step is only executed if Stage 1 configured the Property ProtoCompileTwice to true.
+		This should only be the case very rarely.
+		
+	Stage 4 - Protobuf Finalize via Target 
+	
+		Now the generated files are added to the project so they can be compiled by the C++ compiler.
+	
+	-->
+
+	<!-- Stage 1 -->
+	<Target Name="ProtobufConfigure" BeforeTargets="CustomBuild">
+
+		<PropertyGroup Condition="Exists('$(ProtobufExePath)')">
+			<ProtoCompileTwice>false</ProtoCompileTwice>
+		</PropertyGroup>
+		<PropertyGroup Condition="!Exists('$(ProtobufExePath)')">
+			<ProtoCompileTwice>true</ProtoCompileTwice>
+		</PropertyGroup>
+
+
+		<!-- Required for first build -->
+		<MakeDir Directories="$(ProtobufOutDir)" Condition="!Exists('$(ProtobufOutDir)')" />
+		<MakeDir Directories="$(GrpcOutDir)" Condition="!Exists('$(GrpcOutDir)')" />
+
+		<ItemGroup>
+
+			<!-- Stage 2 -->
+
+			<!-- Unfortunately, the detection of file changes in C++ projects does not work as expected, unlike in C# projects. -->
+			<!-- This has the consequence that file changes to a .proto file do not trigger a recompilation. -->
+			<!-- The following approach using CustomBuild solves this problem, but unfortunately has a disadvantage: -->
+			<!-- The ItemType "ProtobufCompile" cannot be specified in the ProjectSchemaDefinitions as expected, because Visual Studio shows the following error when loading the project: -->
+			<!-- Cannot load project with duplicated project items: xxx.proto is included as 'CustomBuild' and as 'ProtobufCompile' item types. -->
+			<CustomBuild Include="@(ProtobufCompile)">
+				<Outputs>
+					$(ProtobufOutDir)%(Filename).pb.h;
+					$(ProtobufOutDir)%(Filename).pb.cc;
+					$(GrpcOutDir)%(Filename).grpc.pb.h;
+					$(GrpcOutDir)%(Filename).grpc.pb.cc
+				</Outputs>
+				<Message>%(Filename)%(Extension)</Message>
+				<Command>
+					IF EXIST "$(ProtobufExePath)" IF EXIST "$(GrpcCppPluginExePath)" (
+					    "$(ProtobufExePath)" --plugin="protoc-gen-grpc=$(GrpcCppPluginExePath)" --grpc_out="$(GrpcOutDir.TrimEnd('\'))" --cpp_out="$(ProtobufOutDir.TrimEnd('\'))" --proto_path="$([System.String]::Copy('%(RootDir)%(Directory)').TrimEnd('\'))" "%(FullPath)"
+					)
+				</Command>
+			</CustomBuild>
+
+		</ItemGroup>
+
+	</Target>
+
+	<!-- Stage 3 -->
+	<Target Name="ProtobufCompile" AfterTargets="$(ProtobufAfterTargets)" Condition="$(ProtoCompileTwice)"
+			Outputs="@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.h');@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).pb.cc');@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).grpc.pb.h');@(ProtobufCompile->'$(ProtobufOutDir)%(Filename).grpc.pb.cc')">
 
 		<Error Condition="$(VcpkgEnabled)!='true'" Text="Vcpkg not enabled. See https://github.com/microsoft/vcpkg#getting-started for more details." />
 
-		<Error Condition="!Exists('$(ProtobufDir)protoc.exe') AND $(VcpkgEnableManifest)!='true'" Text="protobuf not installed. Use 'vcpkg install protobuf:$(PlatformTarget)-windows' to install Protobuf." />
-		<Error Condition="!Exists('$(ProtobufDir)protoc.exe') AND $(VcpkgEnableManifest)=='true'" Text="protobuf not found. Add protobuf as dependency to the 'vcpkg.json' file." />
+		<Error Condition="!Exists('$(ProtobufExePath)') AND $(VcpkgEnableManifest)!='true'" Text="protobuf not installed. Use 'vcpkg install protobuf:$(PlatformTarget)-windows' to install Protobuf." />
+		<Error Condition="!Exists('$(ProtobufExePath)') AND $(VcpkgEnableManifest)=='true'" Text="protobuf not found. Add protobuf as dependency to the 'vcpkg.json' file." />
 
-		<Error Condition="!Exists('$(GrpcDir)grpc_cpp_plugin.exe') AND $(VcpkgEnableManifest)=='true'" Text="gRPC not found. Add grpc as dependency to the 'vcpkg.json' file." />
-		<Error Condition="!Exists('$(GrpcDir)grpc_cpp_plugin.exe') AND $(VcpkgEnableManifest)!='true'" Text="gRPC not installed. Use 'vcpkg install grpc:$(PlatformTarget)-windows' to install gRPC." />
+		<Error Condition="!Exists('$(GrpcCppPluginExePath)') AND $(VcpkgEnableManifest)!='true'" Text="grpc not installed. Use 'vcpkg install grpc:$(PlatformTarget)-windows' to install grpc." />
+		<Error Condition="!Exists('$(GrpcCppPluginExePath)') AND $(VcpkgEnableManifest)=='true'" Text="grpc not found. Add grpc as dependency to the 'vcpkg.json' file." />
+
+		<PropertyGroup>
+			<ProtoPath>%(ProtobufCompile.RootDir)\%(ProtobufCompile.Directory)</ProtoPath>
+		</PropertyGroup>
+
+		<Message Text="%(ProtobufCompile.Filename)%(ProtobufCompile.Extension)" Importance="high" />
+
+		<Exec Command="&quot;$(ProtobufExePath)&quot; --plugin=&quot;protoc-gen-grpc=$(GrpcCppPluginExePath)&quot; --grpc_out=&quot;$(GrpcOutDir.TrimEnd('\'))&quot;  --cpp_out=&quot;$(ProtobufOutDir.TrimEnd('\'))&quot; --proto_path=&quot;$([System.String]::Copy('%(RootDir)%(Directory)').TrimEnd('\'))&quot; &quot;%(ProtobufCompile.FullPath)&quot;" />
+
+	</Target>
+
+	<!-- Stage 4 -->
+	<Target Name="ProtobufFinalize" AfterTargets="ProtobufCompile">
 
 		<!-- The .cc files must be in this target, otherwise these files would be displayed in the Solution Explorer, which is not desired. -->
 		<ItemGroup>
@@ -71,32 +173,6 @@
 		</ItemGroup>
 
 	</Target>
-
-	<!-- Configure CustomBuild to run after validation and before C++ compilation -->
-	<PropertyGroup>
-		<CustomBuildAfterTargets>_PrepareGrpcCompilation</CustomBuildAfterTargets>
-		<CustomBuildBeforeTargets>ClCompile</CustomBuildBeforeTargets>
-	</PropertyGroup>
-
-	<ItemGroup>
-
-		<!-- Unfortunately, the detection of file changes in C++ projects does not work as expected, unlike in C# projects. -->
-		<!-- This has the consequence that file changes to a .proto file do not trigger a recompilation. -->
-		<!-- The following approach using CustomBuild solves this problem, but unfortunately has a disadvantage: -->
-		<!-- The ItemType "ProtobufCompile" cannot be specified in the ProjectSchemaDefinitions as expected, because Visual Studio shows the following error when loading the project: -->
-		<!-- Cannot load project with duplicated project items: xxx.proto is included as 'CustomBuild' and as 'ProtobufCompile' item types. -->
-		<!-- Therefore, no explicit ItemType is specified here - the CustomBuild type is implicitly applied through the Include attribute. -->
-		<CustomBuild Include="@(ProtobufCompile)">
-			<Outputs>
-				$(ProtobufOutDir)%(Filename).pb.h;
-				$(ProtobufOutDir)%(Filename).pb.cc;
-				$(GrpcOutDir)%(Filename).grpc.pb.h;
-				$(GrpcOutDir)%(Filename).grpc.pb.cc
-			</Outputs>
-			<Message>%(Filename)%(Extension)</Message>
-			<Command>"$(ProtobufDir)protoc.exe" --plugin=protoc-gen-grpc="$(GrpcDir)grpc_cpp_plugin.exe" --grpc_out="$(GrpcOutDir.Trim('\\'))" --cpp_out="$(ProtobufOutDir.Trim('\\'))" --proto_path=%(RootDir)%(Directory) %(FullPath)</Command>
-		</CustomBuild>
-	</ItemGroup>
 
 	<!-- Clean protobuf generated files -->
 	<Target Name="ProtobufClean">
